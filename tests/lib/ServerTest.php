@@ -26,6 +26,7 @@ namespace Test;
 
 use OC\App\AppStore\Fetcher\AppFetcher;
 use OC\App\AppStore\Fetcher\CategoryFetcher;
+use OCP\IEventSource;
 
 /**
  * Class Server
@@ -179,11 +180,6 @@ class ServerTest extends \Test\TestCase {
 		$this->assertInstanceOf('\OCP\ICertificateManager', $this->server->getCertificateManager(), 'service returned by "getCertificateManager" did not return the right class');
 	}
 
-	public function testCreateEventSource() {
-		$this->assertInstanceOf('\OC_EventSource', $this->server->createEventSource(), 'service returned by "createEventSource" did not return the right class');
-		$this->assertInstanceOf('\OCP\IEventSource', $this->server->createEventSource(), 'service returned by "createEventSource" did not return the right class');
-	}
-
 	public function testOverwriteDefaultCommentsManager() {
 		$config = $this->server->getConfig();
 		$defaultManagerFactory = $config->getSystemValue('comments.managerFactory', '\OC\Comments\ManagerFactory');
@@ -194,5 +190,15 @@ class ServerTest extends \Test\TestCase {
 		$this->assertInstanceOf('\OCP\Comments\ICommentsManager', $manager);
 
 		$config->setSystemValue('comments.managerFactory', $defaultManagerFactory);
+	}
+
+	public function testEventSource(): void {
+		$a = $this->server->get(IEventSource::class);
+		$b = $this->server->get(IEventSource::class);
+
+		$this->assertInstanceOf(IEventSource::class, $a);
+		$this->assertInstanceOf(IEventSource::class, $b);
+
+		$this->assertNotSame($a, $b);
 	}
 }
