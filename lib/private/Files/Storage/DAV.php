@@ -41,7 +41,7 @@ use Exception;
 use Icewind\Streams\CallbackWrapper;
 use Icewind\Streams\IteratorDirectory;
 use OC\Files\Filesystem;
-use OC\MemCache\ArrayCache;
+use OC\Memcache\ArrayCache;
 use OCP\AppFramework\Http;
 use OCP\Constants;
 use OCP\Diagnostics\IEventLogger;
@@ -86,6 +86,8 @@ class DAV extends Common {
 	protected $client;
 	/** @var ArrayCache */
 	protected $statCache;
+	/** @var ArrayCache */
+	protected $propfindCache;
 	/** @var IClientService */
 	protected $httpClientService;
 	/** @var ICertificateManager */
@@ -99,6 +101,7 @@ class DAV extends Common {
 	 */
 	public function __construct($params) {
 		$this->statCache = new ArrayCache();
+		$this->propfindCache = new ArrayCache();
 		$this->httpClientService = \OC::$server->getHTTPClientService();
 		if (isset($params['host']) && isset($params['user']) && isset($params['password'])) {
 			$host = $params['host'];
@@ -235,7 +238,16 @@ class DAV extends Common {
 		try {
 			$response = $this->client->propFind(
 				$this->encodePath($path),
-				['{DAV:}getetag'],
+				[
+					'{DAV:}getlastmodified',
+					'{DAV:}getcontentlength',
+					'{DAV:}getcontenttype',
+					'{http://owncloud.org/ns}permissions',
+					'{http://open-collaboration-services.org/ns}share-permissions',
+					'{DAV:}resourcetype',
+					'{DAV:}getetag',
+					'{DAV:}quota-available-bytes',
+				],
 				1
 			);
 			if ($response === false) {
@@ -254,7 +266,9 @@ class DAV extends Common {
 				if (!$this->statCache->hasKey($path)) {
 					$this->statCache->set($file, true);
 				}
+				$fileDetail = $response[$file];
 				$file = basename($file);
+				$this->propfindCache->set($file, $fileDetail);
 				$content[] = $file;
 			}
 			return IteratorDirectory::wrap($content);
@@ -278,6 +292,10 @@ class DAV extends Common {
 	 */
 	protected function propfind($path) {
 		$path = $this->cleanPath($path);
+		$propfindCacheResponse = $this->propfindCache->get($path);
+		if (!is_null($propfindCacheResponse)) {
+			return $propfindCacheResponse;
+		}
 		$cachedResponse = $this->statCache->get($path);
 		// we either don't know it, or we know it exists but need more details
 		if (is_null($cachedResponse) || $cachedResponse === true) {
