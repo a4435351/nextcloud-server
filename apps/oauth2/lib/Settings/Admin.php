@@ -29,22 +29,18 @@ namespace OCA\OAuth2\Settings;
 use OCA\OAuth2\Db\ClientMapper;
 use OCP\AppFramework\Http\TemplateResponse;
 use OCP\AppFramework\Services\IInitialState;
+use OCP\Security\ICrypto;
 use OCP\Settings\ISettings;
 use OCP\IURLGenerator;
 
 class Admin implements ISettings {
-	private IInitialState $initialState;
-	private ClientMapper $clientMapper;
-	private IURLGenerator $urlGenerator;
 
 	public function __construct(
-		IInitialState $initialState,
-		ClientMapper $clientMapper,
-		IURLGenerator $urlGenerator
+		private IInitialState $initialState,
+		private ClientMapper $clientMapper,
+		private IURLGenerator $urlGenerator,
+		private ICrypto $crypto
 	) {
-		$this->initialState = $initialState;
-		$this->clientMapper = $clientMapper;
-		$this->urlGenerator = $urlGenerator;
 	}
 
 	public function getForm(): TemplateResponse {
@@ -52,12 +48,13 @@ class Admin implements ISettings {
 		$result = [];
 
 		foreach ($clients as $client) {
+			$secret = $this->crypto->decrypt($client->getSecret());
 			$result[] = [
 				'id' => $client->getId(),
 				'name' => $client->getName(),
 				'redirectUri' => $client->getRedirectUri(),
 				'clientId' => $client->getClientIdentifier(),
-				'clientSecret' => $client->getSecret(),
+				'clientSecret' => $secret,
 			];
 		}
 		$this->initialState->provideInitialState('clients', $result);

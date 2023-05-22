@@ -125,7 +125,8 @@ class OauthApiController extends Controller {
 		}
 
 		// The client id and secret must match. Else we don't provide an access token!
-		if ($client->getClientIdentifier() !== $client_id || $client->getSecret() !== $client_secret) {
+		$storedClientSecret = $this->crypto->decrypt($client->getSecret());
+		if ($client->getClientIdentifier() !== $client_id || $storedClientSecret !== $client_secret) {
 			return new JSONResponse([
 				'error' => 'invalid_client',
 			], Http::STATUS_BAD_REQUEST);

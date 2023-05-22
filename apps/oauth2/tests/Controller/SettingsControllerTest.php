@@ -38,6 +38,7 @@ use OCP\IL10N;
 use OCP\IRequest;
 use OCP\IUser;
 use OCP\IUserManager;
+use OCP\Security\ICrypto;
 use OCP\Security\ISecureRandom;
 use Test\TestCase;
 
@@ -61,6 +62,8 @@ class SettingsControllerTest extends TestCase {
 	private $settingsController;
 	/** @var IL10N|\PHPUnit\Framework\MockObject\MockObject */
 	private $l;
+	/** @var ICrypto|\PHPUnit\Framework\MockObject\MockObject */
+	private $crypto;
 
 	protected function setUp(): void {
 		parent::setUp();
@@ -71,6 +74,7 @@ class SettingsControllerTest extends TestCase {
 		$this->accessTokenMapper = $this->createMock(AccessTokenMapper::class);
 		$this->authTokenProvider = $this->createMock(IAuthTokenProvider::class);
 		$this->userManager = $this->createMock(IUserManager::class);
+		$this->crypto = $this->createMock(ICrypto::class);
 		$this->l = $this->createMock(IL10N::class);
 		$this->l->method('t')
 			->willReturnArgument(0);
@@ -82,7 +86,8 @@ class SettingsControllerTest extends TestCase {
 			$this->accessTokenMapper,
 			$this->l,
 			$this->authTokenProvider,
-			$this->userManager
+			$this->userManager,
+			$this->crypto
 		);
 
 	}
@@ -175,7 +180,8 @@ class SettingsControllerTest extends TestCase {
 			$this->accessTokenMapper,
 			$this->l,
 			$tokenProviderMock,
-			$userManager
+			$userManager,
+			$this->crypto
 		);
 
 		$result = $settingsController->deleteClient(123);
