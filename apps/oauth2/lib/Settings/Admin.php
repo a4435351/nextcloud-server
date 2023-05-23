@@ -32,6 +32,7 @@ use OCP\AppFramework\Services\IInitialState;
 use OCP\Security\ICrypto;
 use OCP\Settings\ISettings;
 use OCP\IURLGenerator;
+use Psr\Log\LoggerInterface;
 
 class Admin implements ISettings {
 
@@ -39,7 +40,8 @@ class Admin implements ISettings {
 		private IInitialState $initialState,
 		private ClientMapper $clientMapper,
 		private IURLGenerator $urlGenerator,
-		private ICrypto $crypto
+		private ICrypto $crypto,
+		private LoggerInterface $logger,
 	) {
 	}
 
@@ -48,14 +50,18 @@ class Admin implements ISettings {
 		$result = [];
 
 		foreach ($clients as $client) {
-			$secret = $this->crypto->decrypt($client->getSecret());
-			$result[] = [
-				'id' => $client->getId(),
-				'name' => $client->getName(),
-				'redirectUri' => $client->getRedirectUri(),
-				'clientId' => $client->getClientIdentifier(),
-				'clientSecret' => $secret,
-			];
+			try {
+				$secret = $this->crypto->decrypt($client->getSecret());
+				$result[] = [
+					'id' => $client->getId(),
+					'name' => $client->getName(),
+					'redirectUri' => $client->getRedirectUri(),
+					'clientId' => $client->getClientIdentifier(),
+					'clientSecret' => $secret,
+				];
+			} catch (\Exception $e) {
+				$this->logger->error('[Settings] OAuth client secret decryption error', ['exception' => $e]);
+			}
 		}
 		$this->initialState->provideInitialState('clients', $result);
 		$this->initialState->provideInitialState('oauth2-doc-link', $this->urlGenerator->linkToDocs('admin-oauth2'));
